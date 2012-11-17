@@ -15,7 +15,7 @@ enum FlowUnitsType {
 #undef X
 };
 
-const char* const FlowUnitsToDesc[] {
+const char* const FlowUnitsToDesc[] = {
 #define X(name, desc) desc,
 #include "flow_units.def"
 #undef X
@@ -27,7 +27,7 @@ enum ConcentrationUnitTypes {
 #undef X
 };
 
-const char* const ConcentrationUnitToDesc[] {
+const char* const ConcentrationUnitToDesc[] = {
 #define X(name, desc) desc,
 #include "concentration_units.def"
 #undef X
@@ -60,7 +60,7 @@ typedef struct {
     char id[512];
 } __attribute__((packed)) swmm_id_t;
 
-size_t read_ids(void *map, size_t _offset, int num) {
+size_t read_ids(char *map, size_t _offset, int num) {
     size_t offset = _offset;
     for (int i = 0; i < num; i++) {
         char cid[512];
@@ -74,7 +74,7 @@ size_t read_ids(void *map, size_t _offset, int num) {
     return offset - _offset;
 }
 
-size_t read_catchement_areas(void *map, size_t offset, int num_c) {
+size_t read_catchement_areas(char *map, size_t offset, int num_c) {
     swmm_catch_area_t *area = (swmm_catch_area_t*) (map + offset);
     assert(area->one == 1);
     assert(area->input_area_magic == INPUT_AREA);
@@ -96,7 +96,7 @@ typedef struct {
     swmm_node_info_values_t values[4096];
 } __attribute__((packed)) swmm_node_info_t;
 
-size_t read_node_info(void *map, size_t offset, int num_nodes) {
+size_t read_node_info(char *map, size_t offset, int num_nodes) {
     swmm_node_info_t *node_type = (swmm_node_info_t*) (map+offset);
     assert(node_type->header[0] == 3);
     assert(node_type->header[1] == INPUT_TYPE_CODE);
@@ -122,7 +122,7 @@ typedef struct {
     swmm_link_info_values_t values[4096];
 } __attribute__((packed)) swmm_link_info_t;
 
-size_t read_link_info(void *map, size_t offset, int num_links) {
+size_t read_link_info(char *map, size_t offset, int num_links) {
     swmm_link_info_t *info = (swmm_link_info_t*) (map+offset);
 
     assert(info->header[0] == 5);
@@ -153,7 +153,7 @@ int main(int argc, char *argv[]) {
     (void) argv;
 
     int fd;
-    void *map;
+    char *map;
     struct stat buf;
 
     fd = open("out.seq.1", O_RDONLY);
@@ -168,7 +168,7 @@ int main(int argc, char *argv[]) {
     }
 
 
-    map = mmap(0, buf.st_size, PROT_READ, MAP_SHARED, fd, 0);
+    map = (char *) mmap(0, buf.st_size, PROT_READ, MAP_SHARED, fd, 0);
 
     if (map == MAP_FAILED) {
         perror("mmapping file");
@@ -242,5 +242,5 @@ int main(int argc, char *argv[]) {
 
     int32_t *report_step = (int32_t*) (map+offset);
     offset += sizeof(int32_t);
-    printf("report step %d\n", report_step);
+    printf("report step %d\n", *report_step);
 }
