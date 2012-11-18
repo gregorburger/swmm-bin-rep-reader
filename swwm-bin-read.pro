@@ -14,9 +14,18 @@ CONFIG   -= app_bundle
 
 TEMPLATE = app
 
+QMAKE_CFLAGS += -std=c99
 
-SOURCES += main.cpp
+SOURCES += main.cpp \
+    reader.c \
+    datetime.c
 
 OTHER_FILES += \
     flow_units.def \
     input_data_type.def
+
+HEADERS += \
+    reader.h \
+    enums.h \
+    parse_types.h \
+    datetime.h
