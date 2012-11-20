@@ -66,10 +66,8 @@ int main(int argc, char *argv[]) {
             perror("opening report file");
             return EXIT_FAILURE;
         }
-        print_dates(handles[i]);
+        //print_dates(handles[i]);
     }
-
-    return 0;
 
     check_same_sim(handles, num_inputs);
 
