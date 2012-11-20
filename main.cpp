@@ -102,12 +102,12 @@ int main(int argc, char *argv[]) {
 
     //printf("found %lu diffs\n", diffs.size());
 
-    diffs.resize(10);
+    //diffs.resize(10);
 
     for(int h_idx = 0; h_idx < num_inputs; ++h_idx) {
         for (diff_occurance &d: diffs) {
             const float *results = sbrr_get_element_results(handles[h_idx], d.period, d.index, d.type);
-            printf("%f;", results[d.result_idx]);
+            printf("%30.15f;", results[d.result_idx]);
         }
         printf("\n");
     }
