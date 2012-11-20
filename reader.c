@@ -54,7 +54,6 @@ void sanity_check(sbrr handle) {
     int32_t results_size = handle->bytes_per_period*handle->footer->num_periods;
     int32_t results_end = handle->buf.st_size - sizeof(footer_t);
     assert(handle->footer->output_offset == results_end-results_size);
-    printf("sanity done\n");
 }
 
 int sbrr_create(sbrr *handle, const char *binary_report_file) {
