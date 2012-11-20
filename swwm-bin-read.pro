@@ -15,6 +15,7 @@ CONFIG   -= app_bundle
 TEMPLATE = app
 
 QMAKE_CFLAGS += -std=c99
+QMAKE_CXXFLAGS += -std=c++11
 
 SOURCES += main.cpp \
     reader.c \
@@ -22,7 +23,10 @@ SOURCES += main.cpp \
 
 OTHER_FILES += \
     flow_units.def \
-    input_data_type.def
+    input_data_type.def \
+    subcatch_result_type.def \
+    node_result_type.def \
+    element_type.def
 
 HEADERS += \
     reader.h \

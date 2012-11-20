@@ -1,0 +1,7 @@
+X(NODE_DEPTH, "water depth above invert")
+X(NODE_HEAD, "hydraulic head")
+X(NODE_VOLUME, "volume stored & ponded")
+X(NODE_LATFLOW, "lateral inflow rate")
+X(NODE_INFLOW, "total inflow rate")
+X(NODE_OVERFLOW, "overflow rate")
+X(NODE_QUAL, "concentration of each pollutant")

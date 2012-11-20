@@ -7,12 +7,7 @@
 extern "C" {
 #endif
 
-typedef enum {
-    SubCatchement,
-    Node,
-    Link,
-    Pollutant
-} ElementType;
+#include "enums.h"
 
 //typedef struct sbrr_t* sbrr;
 typedef struct sbrr_t *sbrr;
@@ -26,14 +21,16 @@ int     sbrr_get_num_elements(sbrr handle,
 
 int     sbrr_get_num_periods(sbrr handle);
 
-char    *sbrr_get_element_id(sbrr handle,
+const char *
+        sbrr_get_element_id(sbrr handle,
                              int index ,
                              ElementType type);
 
 double  sbrr_get_result_date(sbrr handle,
                              int period);
 
-float   *sbrr_get_element_results(sbrr handle,
+const float *
+        sbrr_get_element_results(sbrr handle,
                                   int period,
                                   int index ,
                                   ElementType type);

@@ -1,6 +1,10 @@
 #ifndef PARSE_TYPES_H
 #define PARSE_TYPES_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct {
     int32_t len;
     char id[512];
@@ -24,5 +28,9 @@ typedef struct {
     int32_t error_code;
     int32_t magic;
 } __attribute__((packed)) footer_t;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // PARSE_TYPES_H

@@ -1,6 +1,5 @@
 #include "reader.h"
 #include <inttypes.h>
-#include <sys/mman.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <stdlib.h>
@@ -48,6 +47,15 @@ size_t read_ids(char **ids, char *map, size_t _offset, int index ) {
     return offset - _offset;
 }
 
+void sanity_check(sbrr handle) {
+    assert(handle->header->magic == MAGIC);
+    assert(handle->footer->magic == MAGIC);
+    assert(sizeof(header_t) == handle->footer->ids_offset);
+    int32_t results_size = handle->bytes_per_period*handle->footer->num_periods;
+    int32_t results_end = handle->buf.st_size - sizeof(footer_t);
+    assert(handle->footer->output_offset == results_end-results_size);
+    printf("sanity done\n");
+}
 
 int sbrr_create(sbrr *handle, const char *binary_report_file) {
     size_t offset;
@@ -68,20 +76,15 @@ int sbrr_create(sbrr *handle, const char *binary_report_file) {
         return errno;
     }
 
-    tmp_handle->map = (char *) mmap(0, tmp_handle->buf.st_size, PROT_READ, MAP_SHARED, tmp_handle->fd, 0);
-
-    if (tmp_handle->map == MAP_FAILED) {
-        free(tmp_handle);
-        close(tmp_handle->fd);
-        return errno;
-    }
+    tmp_handle->map = (char *) malloc(tmp_handle->buf.st_size);
+    read(tmp_handle->fd, (void *) tmp_handle->map, tmp_handle->buf.st_size);
 
     tmp_handle->header = (header_t*) tmp_handle->map;
     tmp_handle->footer = (footer_t*) (tmp_handle->map + tmp_handle->buf.st_size-sizeof(footer_t));
     if (tmp_handle->header->magic != MAGIC || tmp_handle->footer->magic != MAGIC) {
-        free(tmp_handle);
         close(tmp_handle->fd);
-        munmap((void *) tmp_handle->map, tmp_handle->buf.st_size);
+        free(tmp_handle->map);
+        free(tmp_handle);
         return -1;
     }
 
@@ -103,15 +106,17 @@ int sbrr_create(sbrr *handle, const char *binary_report_file) {
     }
 
     int npol = tmp_handle->header->num_pollutants;
-    tmp_handle->subcatchment_result_len =  MAX_SUBCATCH_RESULTS - 1 + npol;
-    tmp_handle->node_result_len = MAX_NODE_RESULTS - 1 + npol;
-    tmp_handle->link_result_len = MAX_LINK_RESULTS - 1 + npol;
+    tmp_handle->subcatchment_result_len =  SUBCATCH_RESULTS_MAX - 1 + npol;
+    tmp_handle->node_result_len = NODE_RESULTS_MAX - 1 + npol;
+    tmp_handle->link_result_len = LINK_RESULTS_MAX - 1 + npol;
 
     tmp_handle->bytes_per_period = sizeof(double)
         + tmp_handle->header->num_subcatchments * tmp_handle->subcatchment_result_len * sizeof(float)
         + tmp_handle->header->num_nodes * tmp_handle->node_result_len * sizeof(float)
         + tmp_handle->header->num_links * tmp_handle->link_result_len * sizeof(float)
         + MAX_SYS_RESULTS * sizeof(float);
+
+    sanity_check(tmp_handle);
 
     *handle = (sbrr) tmp_handle;
     return 0;
@@ -131,7 +136,7 @@ void sbrr_destroy(sbrr handle) {
         free(handle->subcatchment_ids[i]);
     }
     free(handle->subcatchment_ids);
-    munmap((void*) handle->map, handle->buf.st_size);
+    free(handle->map);
     close(handle->fd);
     free(handle);
 }
@@ -162,7 +167,7 @@ int sbrr_get_num_periods(sbrr handle) {
     return handle->footer->num_periods;
 }
 
-char    *sbrr_get_element_id(sbrr handle,
+const char *sbrr_get_element_id(sbrr handle,
                              int index ,
                              ElementType type) {
     char **ids;
@@ -174,18 +179,36 @@ char    *sbrr_get_element_id(sbrr handle,
 }
 
 double sbrr_get_result_date(sbrr handle, int period) {
-    size_t offset = handle->footer->output_offset + (period-1)*handle->bytes_per_period;
-    return *((double *) (handle->map + offset));
+    size_t offset = handle->footer->output_offset + (period)*handle->bytes_per_period;
+    double *date = (double *) (handle->map + offset);
+    return *date;
 }
 
-float *sbrr_get_element_results(sbrr handle,
+const float *sbrr_get_element_results(sbrr handle,
                                 int period,
                                 int index,
                                 ElementType type) {
-    assert(type == SubCatchement);
-    size_t offset = handle->footer->output_offset + (period-1)*handle->bytes_per_period;
-    offset += sizeof(double);
-    offset += index * handle->subcatchment_result_len*sizeof(float);
-    return (float *) (handle->map + offset);
+    if (type == SubCatchement) {
+        size_t offset = handle->footer->output_offset + (period)*handle->bytes_per_period;
+        offset += sizeof(double);
+        offset += index * handle->subcatchment_result_len*sizeof(float);
+        return (float *) (handle->map + offset);
+    }
+    if (type == Node) {
+        size_t offset = handle->footer->output_offset + (period)*handle->bytes_per_period;
+        offset += sizeof(double);
+        offset += handle->header->num_subcatchments * handle->subcatchment_result_len*sizeof(float);
+        offset += index * handle->node_result_len*sizeof(float);
+        return (float *) (handle->map + offset);
+    }
+    if (type == Link) {
+        size_t offset = handle->footer->output_offset + (period)*handle->bytes_per_period;
+        offset += sizeof(double);
+        offset += handle->header->num_subcatchments * handle->subcatchment_result_len*sizeof(float);
+        offset += handle->header->num_nodes * handle->node_result_len*sizeof(float);
+        offset += index * handle->link_result_len*sizeof(float);
+        return (float *) (handle->map + offset);
+    }
+    return 0;
 }
 

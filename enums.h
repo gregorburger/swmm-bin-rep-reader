@@ -1,6 +1,10 @@
 #ifndef ENUMS_H
 #define ENUMS_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum ConcentrationUnitTypes {
 #define X(name, desc) name,
 #include "concentration_units.def"
@@ -32,33 +36,39 @@ enum InputDataType {
 #undef X
 };
 
-#define MAX_SUBCATCH_RESULTS 7
+#define SUBCATCH_RESULTS_MAX 7
 enum SubcatchResultType {
-     SUBCATCH_RAINFALL,               // rainfall intensity
-     SUBCATCH_SNOWDEPTH,              // snow depth
-     SUBCATCH_LOSSES,                 // total losses (evap + infil)
-     SUBCATCH_RUNOFF,                 // runoff flow rate
-     SUBCATCH_GW_FLOW,                // groundwater flow rate to node
-     SUBCATCH_GW_ELEV,                // elevation of saturated gw table
-     SUBCATCH_WASHOFF};               // pollutant washoff concentration
+#define X(name, desc) name,
+#include "subcatch_result_type.def"
+#undef X
+};
+
+const char *const SubcatchResultTypeDesc[] = {
+#define X(name, desc) desc
+#include "subcatch_result_type.def"
+#undef X
+};
 
 //-------------------------------------
 // Computed node quantities
 //-------------------------------------
-#define MAX_NODE_RESULTS 7
+#define NODE_RESULTS_MAX 7
 enum NodeResultType {
-     NODE_DEPTH,                      // water depth above invert
-     NODE_HEAD,                       // hydraulic head
-     NODE_VOLUME,                     // volume stored & ponded
-     NODE_LATFLOW,                    // lateral inflow rate
-     NODE_INFLOW,                     // total inflow rate
-     NODE_OVERFLOW,                   // overflow rate
-     NODE_QUAL};                      // concentration of each pollutant
+#define X(name, desc) name,
+#include "node_result_type.def"
+#undef X
+};
+
+const char *const NodeResultTypeDesc[] = {
+#define X(name, desc) desc,
+#include "node_result_type.def"
+#undef X
+};
 
 //-------------------------------------
 // Computed link quantities
 //-------------------------------------
-#define MAX_LINK_RESULTS 6
+#define LINK_RESULTS_MAX 6
 enum LinkResultType {
      LINK_FLOW,                       // flow rate
      LINK_DEPTH,                      // flow depth
@@ -66,6 +76,24 @@ enum LinkResultType {
      LINK_FROUDE,                     // Froude number
      LINK_CAPACITY,                   // ratio of depth to full depth
      LINK_QUAL};                      // concentration of each pollutant
+
+typedef enum {
+#define X(name, max) name,
+#include "element_type.def"
+#undef X
+} ElementType;
+
+const char* const ElementTypeDesc[] = {
+#define X(name, max) #name,
+#include "element_type.def"
+#undef X
+};
+
+const int ElementTypeMax[] = {
+#define X(name, max) max,
+#include "element_type.def"
+#undef X
+};
 
 //-------------------------------------
 // System-wide flow quantities
@@ -87,5 +115,8 @@ enum SysFlowType {
     SYS_STORAGE,                      // storage volume
     SYS_EVAPORATION};                 // evaporation                          //(5.0.016 - LR)
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif // ENUMS_H

@@ -1,0 +1,7 @@
+X(SUBCATCH_RAINFALL, "rainfall intensity")
+X(SUBCATCH_SNOWDEPTH, "snow depth")
+X(SUBCATCH_LOSSES, "total losses (evap + infil)")
+X(SUBCATCH_RUNOFF, "runoff flow rate")
+X(SUBCATCH_GW_FLOW, "groundwater flow rate to node")
+X(SUBCATCH_GW_ELEV, "elevation of saturated gw table")
+X(SUBCATCH_WASHOFF, "pollutant washoff concentration")

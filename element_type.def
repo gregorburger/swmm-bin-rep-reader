@@ -1,0 +1,4 @@
+X(SubCatchement, SUBCATCH_RESULTS_MAX)
+X(Node, NODE_RESULTS_MAX)
+X(Link, LINK_RESULTS_MAX)
+X(Pollutant, 0)
