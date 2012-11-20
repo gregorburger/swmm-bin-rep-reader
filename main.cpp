@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
         for (int type = 0; type < Pollutant; ++type) {
 
             //printf("[%s]\n", ElementTypeDesc[type]);
-            for (int idx = 0; idx < sbrr_get_num_elements(handles[0], SubCatchement); ++idx) {
+            for (int idx = 0; idx < sbrr_get_num_elements(handles[0], (ElementType) type); ++idx) {
                 const char *id = sbrr_get_element_id(handles[0], idx, (ElementType) type);
                 (void) id;
                 const float *results_0 = sbrr_get_element_results(handles[0], period, idx, (ElementType) type);
