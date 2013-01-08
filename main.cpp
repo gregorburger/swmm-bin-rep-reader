@@ -46,8 +46,10 @@ void print_dates(sbrr handle) {
 struct diff_occurance {
     ElementType type; //which type
     int index; //which element
+    const char *id;
     int period; //at what period
     int result_idx; //which result differ
+    const char *result_name;
 };
 
 int main(int argc, char *argv[]) {
@@ -62,7 +64,8 @@ int main(int argc, char *argv[]) {
     sbrr *handles = (sbrr*) malloc(sizeof(sbrr)*(num_inputs));
 
     for (int i = 0; i < num_inputs; ++i) {
-        if (sbrr_create(&handles[i], argv[i+1]) < 0) {
+        handles[i] = sbrr_create();
+        if (sbrr_open(handles[i], argv[i+1]) < 0) {
             perror("opening report file");
             return EXIT_FAILURE;
         }
@@ -73,42 +76,70 @@ int main(int argc, char *argv[]) {
 
     std::vector<diff_occurance> diffs;
 
+    int n; //stores the number of results
+
     for (int period = 0; period < sbrr_get_num_periods(handles[0]); ++period) {
 
-        for (int type = 0; type < Pollutant; ++type) {
+        for (int idx = 0; idx < sbrr_get_num_elements(handles[0], Node); ++idx) {
+            const char *id = sbrr_get_element_id(handles[0], idx, Node);
+            float *results_0;
+            sbrr_get_element_results(handles[0], period, idx, Node, &results_0, &n);
 
-            //printf("[%s]\n", ElementTypeDesc[type]);
-            for (int idx = 0; idx < sbrr_get_num_elements(handles[0], (ElementType) type); ++idx) {
-                const char *id = sbrr_get_element_id(handles[0], idx, (ElementType) type);
-                (void) id;
-                const float *results_0 = sbrr_get_element_results(handles[0], period, idx, (ElementType) type);
-                for (int r = 0; r < ElementTypeMax[type]; ++r) {
-                    bool found_diff = false;
-                    for (int h_idx = 1; h_idx < num_inputs; ++h_idx) {
-                        if (found_diff) break;
-                        const float *results_i = sbrr_get_element_results(handles[h_idx], period, idx, (ElementType) type);
-                        if (results_0[r] != results_i[r]) {
-                            //printf("%d of %20s in period %d: diff %2.20f\n", r, id, period, fabs(results_0[r] - results_i[r]));
-                            //printf("found difference at period %d with element %s in result %d\n", period, id, r);
-                            found_diff = true;
-                            diff_occurance d = {(ElementType) type, idx, period, r};
-                            diffs.push_back(d);
-                        }
+            bool found_diff = false;
+            for (int h_idx = 1; h_idx < num_inputs; ++h_idx) {
+                if (found_diff) break;
+                float *results_i;
+                sbrr_get_element_results(handles[h_idx], period, idx, Node, &results_i, &n);
+                if (results_0[NODE_DEPTH] != results_i[NODE_DEPTH]) {
+                    found_diff = true;
+                    diff_occurance d = {Node, idx, id, period, NODE_DEPTH, NodeResultTypeName[NODE_DEPTH]};
+                    diffs.push_back(d);
+                }
+            }
+        }
+
+        for (int idx = 0; idx < sbrr_get_num_elements(handles[0], Link); ++idx) {
+            const char *id = sbrr_get_element_id(handles[0], idx, Link);
+            float *results_0;
+            sbrr_get_element_results(handles[0], period, idx, Link, &results_0, &n);
+            const int wr[] = {LINK_FLOW, LINK_VELOCITY}; //wr = wanted results
+
+            for (size_t r = 0; r < sizeof(wr)/sizeof(wr[0]); ++r) {
+                bool found_diff = false;
+                for (int h_idx = 1; h_idx < num_inputs; ++h_idx) {
+                    if (found_diff) break;
+                    float *results_i;
+                    sbrr_get_element_results(handles[h_idx], period, idx, Link, &results_i, &n);
+                    if (results_0[r] != results_i[r]) {
+                        found_diff = true;
+                        diff_occurance d = {Link, idx, id, period, (int) r, LinkResultTypeName[r]};
+                        diffs.push_back(d);
                     }
                 }
             }
         }
     }
 
-    //printf("found %lu diffs\n", diffs.size());
+    FILE *names = fopen("names.py", "w+");
+    //header
+    fprintf(names, "names=[");
+    for (diff_occurance &d: diffs) {
+        fprintf(names, "'%s_%s_%d', ", d.result_name, d.id, d.period);
+    }
+    fprintf(names, "]\n");
+    fclose(names);
 
-    //diffs.resize(10);
+    //printf("x=[");
 
     for(int h_idx = 0; h_idx < num_inputs; ++h_idx) {
+        //qprintf("[");
         for (diff_occurance &d: diffs) {
-            const float *results = sbrr_get_element_results(handles[h_idx], d.period, d.index, d.type);
-            printf("%30.15f;", results[d.result_idx]);
+            float *results;
+            sbrr_get_element_results(handles[h_idx], d.period, d.index, d.type, &results, &n);
+            printf("%.20f ", results[d.result_idx]);
         }
+        //printf("], ");
         printf("\n");
     }
+    //printf("]");
 }

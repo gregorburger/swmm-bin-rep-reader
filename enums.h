@@ -11,7 +11,7 @@ enum ConcentrationUnitTypes {
 #undef X
 };
 
-const char* const ConcentrationUnitToDesc[] = {
+const char* const ConcentrationUnitDesc[] = {
 #define X(name, desc) desc,
 #include "concentration_units.def"
 #undef X
@@ -53,14 +53,20 @@ const char *const SubcatchResultTypeDesc[] = {
 // Computed node quantities
 //-------------------------------------
 #define NODE_RESULTS_MAX 7
-enum NodeResultType {
+typedef enum {
 #define X(name, desc) name,
+#include "node_result_type.def"
+#undef X
+} NodeResultType;
+
+const char *const NodeResultTypeDesc[] = {
+#define X(name, desc) desc,
 #include "node_result_type.def"
 #undef X
 };
 
-const char *const NodeResultTypeDesc[] = {
-#define X(name, desc) desc,
+const char *const NodeResultTypeName[] = {
+#define X(name, desc) #name,
 #include "node_result_type.def"
 #undef X
 };
@@ -69,13 +75,23 @@ const char *const NodeResultTypeDesc[] = {
 // Computed link quantities
 //-------------------------------------
 #define LINK_RESULTS_MAX 6
-enum LinkResultType {
-     LINK_FLOW,                       // flow rate
-     LINK_DEPTH,                      // flow depth
-     LINK_VELOCITY,                   // flow velocity
-     LINK_FROUDE,                     // Froude number
-     LINK_CAPACITY,                   // ratio of depth to full depth
-     LINK_QUAL};                      // concentration of each pollutant
+typedef enum {
+#define X(name, desc) name,
+#include "link_result_type.def"
+#undef X
+} LinkResultType;
+
+const char *const LinkResultTypeDesc[] = {
+#define X(name, desc) desc,
+#include "link_result_type.def"
+#undef X
+};
+
+const char *const LinkResultTypeName[] = {
+#define X(name, desc) #name,
+#include "link_result_type.def"
+#undef X
+};
 
 typedef enum {
 #define X(name, max) name,

@@ -56,68 +56,68 @@ void sanity_check(sbrr handle) {
     assert(handle->footer->output_offset == results_end-results_size);
 }
 
-int sbrr_create(sbrr *handle, const char *binary_report_file) {
+sbrr sbrr_create() {
+    sbrr handle = (sbrr) malloc(sizeof(struct sbrr_t));
+    return handle;
+}
+
+int sbrr_open(sbrr handle, const char *binary_report_file) {
     size_t offset;
 
-    *handle = NULL;
-
-    sbrr tmp_handle = (sbrr) malloc(sizeof(struct sbrr_t));
-
-    tmp_handle->fd = open(binary_report_file, O_RDONLY);
-    if (tmp_handle->fd < 0) {
-        free(tmp_handle);
+    handle->fd = open(binary_report_file, O_RDONLY);
+    if (handle->fd < 0) {
+        free(handle);
         return errno;
     }
 
-    if (fstat(tmp_handle->fd, &tmp_handle->buf) < 0) {
-        free(tmp_handle);
-        close(tmp_handle->fd);
+    if (fstat(handle->fd, &handle->buf) < 0) {
+        free(handle);
+        close(handle->fd);
         return errno;
     }
 
-    tmp_handle->map = (char *) malloc(tmp_handle->buf.st_size);
-    read(tmp_handle->fd, (void *) tmp_handle->map, tmp_handle->buf.st_size);
+    handle->map = (char *) malloc(handle->buf.st_size);
+    read(handle->fd, (void *) handle->map, handle->buf.st_size);
 
-    tmp_handle->header = (header_t*) tmp_handle->map;
-    tmp_handle->footer = (footer_t*) (tmp_handle->map + tmp_handle->buf.st_size-sizeof(footer_t));
-    if (tmp_handle->header->magic != MAGIC || tmp_handle->footer->magic != MAGIC) {
-        close(tmp_handle->fd);
-        free(tmp_handle->map);
-        free(tmp_handle);
+    handle->header = (header_t*) handle->map;
+    handle->footer = (footer_t*) (handle->map + handle->buf.st_size-sizeof(footer_t));
+    if (handle->header->magic != MAGIC || handle->footer->magic != MAGIC) {
+        close(handle->fd);
+        free(handle->map);
+        free(handle);
         return -1;
     }
 
     offset = sizeof(header_t);
 
-    tmp_handle->subcatchment_ids = (char **) malloc(tmp_handle->header->num_subcatchments * sizeof(char **));
-    tmp_handle->node_ids = (char **) malloc(tmp_handle->header->num_nodes * sizeof(char **));
-    tmp_handle->link_ids = (char **) malloc(tmp_handle->header->num_links * sizeof(char **));
+    handle->subcatchment_ids = (char **) malloc(handle->header->num_subcatchments * sizeof(char **));
+    handle->node_ids = (char **) malloc(handle->header->num_nodes * sizeof(char **));
+    handle->link_ids = (char **) malloc(handle->header->num_links * sizeof(char **));
 
-    offset += read_ids(tmp_handle->subcatchment_ids, tmp_handle->map, offset, tmp_handle->header->num_subcatchments);
-    offset += read_ids(tmp_handle->node_ids, tmp_handle->map, offset, tmp_handle->header->num_nodes);
-    offset += read_ids(tmp_handle->link_ids, tmp_handle->map, offset, tmp_handle->header->num_links);
+    offset += read_ids(handle->subcatchment_ids, handle->map, offset, handle->header->num_subcatchments);
+    offset += read_ids(handle->node_ids, handle->map, offset, handle->header->num_nodes);
+    offset += read_ids(handle->link_ids, handle->map, offset, handle->header->num_links);
 
-    tmp_handle->pollutant_types = malloc(sizeof(int)*tmp_handle->header->num_pollutants);
-    for (int i = 0; i < tmp_handle->header->num_pollutants; i++) {
-        int32_t *type = (int32_t*) (tmp_handle->map+offset);
-        tmp_handle->pollutant_types[i] = *type;
+    handle->pollutant_types = malloc(sizeof(int)*handle->header->num_pollutants);
+    for (int i = 0; i < handle->header->num_pollutants; i++) {
+        int32_t *type = (int32_t*) (handle->map+offset);
+        handle->pollutant_types[i] = *type;
         offset += sizeof(int32_t);
     }
 
-    int npol = tmp_handle->header->num_pollutants;
-    tmp_handle->subcatchment_result_len =  SUBCATCH_RESULTS_MAX - 1 + npol;
-    tmp_handle->node_result_len = NODE_RESULTS_MAX - 1 + npol;
-    tmp_handle->link_result_len = LINK_RESULTS_MAX - 1 + npol;
+    int npol = handle->header->num_pollutants;
+    handle->subcatchment_result_len =  SUBCATCH_RESULTS_MAX - 1 + npol;
+    handle->node_result_len = NODE_RESULTS_MAX - 1 + npol;
+    handle->link_result_len = LINK_RESULTS_MAX - 1 + npol;
 
-    tmp_handle->bytes_per_period = sizeof(double)
-        + tmp_handle->header->num_subcatchments * tmp_handle->subcatchment_result_len * sizeof(float)
-        + tmp_handle->header->num_nodes * tmp_handle->node_result_len * sizeof(float)
-        + tmp_handle->header->num_links * tmp_handle->link_result_len * sizeof(float)
+    handle->bytes_per_period = sizeof(double)
+        + handle->header->num_subcatchments * handle->subcatchment_result_len * sizeof(float)
+        + handle->header->num_nodes * handle->node_result_len * sizeof(float)
+        + handle->header->num_links * handle->link_result_len * sizeof(float)
         + MAX_SYS_RESULTS * sizeof(float);
 
-    sanity_check(tmp_handle);
+    sanity_check(handle);
 
-    *handle = (sbrr) tmp_handle;
     return 0;
 }
 
@@ -174,7 +174,22 @@ const char *sbrr_get_element_id(sbrr handle,
     if (type == Link) ids = handle->link_ids;
     if (type == SubCatchement) ids = handle->subcatchment_ids;
 
-    return ids[index ];
+    return ids[index];
+}
+
+int sbrr_get_element_index(sbrr handle, const char *id, ElementType type) {
+    char **ids;
+    int len = sbrr_get_num_elements(handle, type);
+    if (type == Node) ids = handle->node_ids;
+    if (type == Link) ids = handle->link_ids;
+    if (type == SubCatchement) ids = handle->subcatchment_ids;
+
+    for (int i = 0; i < len; ++i) {
+        if (strcmp(ids[i], id) == 0) {
+            return i;
+        }
+    }
+    return -1;
 }
 
 double sbrr_get_result_date(sbrr handle, int period) {
@@ -183,22 +198,29 @@ double sbrr_get_result_date(sbrr handle, int period) {
     return *date;
 }
 
-const float *sbrr_get_element_results(sbrr handle,
-                                int period,
-                                int index,
-                                ElementType type) {
+void sbrr_get_element_results(sbrr handle,
+                              int period,
+                              int index,
+                              ElementType type,
+                              float **data,
+                              int *n) {
+
     if (type == SubCatchement) {
         size_t offset = handle->footer->output_offset + (period)*handle->bytes_per_period;
         offset += sizeof(double);
         offset += index * handle->subcatchment_result_len*sizeof(float);
-        return (float *) (handle->map + offset);
+        *data = (float *) (handle->map + offset);
+        *n = handle->subcatchment_result_len;
+        return;
     }
     if (type == Node) {
         size_t offset = handle->footer->output_offset + (period)*handle->bytes_per_period;
         offset += sizeof(double);
         offset += handle->header->num_subcatchments * handle->subcatchment_result_len*sizeof(float);
         offset += index * handle->node_result_len*sizeof(float);
-        return (float *) (handle->map + offset);
+        *data = (float *) (handle->map + offset);
+        *n = handle->node_result_len;
+        return;
     }
     if (type == Link) {
         size_t offset = handle->footer->output_offset + (period)*handle->bytes_per_period;
@@ -206,8 +228,29 @@ const float *sbrr_get_element_results(sbrr handle,
         offset += handle->header->num_subcatchments * handle->subcatchment_result_len*sizeof(float);
         offset += handle->header->num_nodes * handle->node_result_len*sizeof(float);
         offset += index * handle->link_result_len*sizeof(float);
-        return (float *) (handle->map + offset);
+        *data = (float *) (handle->map + offset);
+        *n = handle->link_result_len;
+        return;
     }
-    return 0;
+    *data = 0;
+    *n = 0;
+}
+
+void sbrr_get_node_results(sbrr handle, int index, NodeResultType type, float *data, int n) {
+    int _n;
+    float *_data;
+    for (int p = 0; p < n; p++) {
+        sbrr_get_element_results(handle, p, index, Node, &_data, &_n);
+        data[p] = _data[type];
+    }
+}
+
+void sbrr_get_link_results(sbrr handle, int index, LinkResultType type, float *data, int n) {
+    int _n;
+    float *_data;
+    for (int p = 0; p < n; p++) {
+        sbrr_get_element_results(handle, p, index, Link, &_data, &_n);
+        data[p] = _data[type];
+    }
 }
 

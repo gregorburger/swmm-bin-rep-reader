@@ -1,0 +1,6 @@
+X(LINK_FLOW, "flow rate")
+X(LINK_DEPTH, "flow depth")
+X(LINK_VELOCITY, "flow velocity")
+X(LINK_FROUDE, "Froude number")
+X(LINK_CAPACITY, "ratio of depth to full depth")
+X(LINK_QUAL, "concentration of each pollutant")
